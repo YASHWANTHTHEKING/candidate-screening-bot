@@ -1,0 +1,86 @@
+{
+  "positions": {
+    "Software Engineer": {
+      "questions": [
+        {
+          "id": "q1",
+          "question": "Describe your programming experience and key technologies you work with.",
+          "weight": 0.25,
+          "keywords": ["python", "java", "api", "rest", "framework", "experience", "years", "backend", "frontend", "full-stack"],
+          "ideal_length": 50
+        },
+        {
+          "id": "q2",
+          "question": "How do you approach debugging a critical production issue?",
+          "weight": 0.25,
+          "keywords": ["debug", "logs", "isolate", "monitor", "systematic", "reproduce", "fix", "hotfix", "stakeholder", "communication"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q3",
+          "question": "How do you manage your tasks and priorities?",
+          "weight": 0.15,
+          "keywords": ["prioritize", "agile", "kanban", "deadline", "milestone", "track", "urgency", "impact", "communicate", "plan"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q4",
+          "question": "Describe a time you improved system performance or efficiency.",
+          "weight": 0.20,
+          "keywords": ["improve", "optimize", "performance", "reduce", "latency", "query", "index", "benchmark", "metric", "percent"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q5",
+          "question": "How do you contribute to team collaboration?",
+          "weight": 0.15,
+          "keywords": ["team", "collaborate", "review", "mentor", "communicate", "pair", "knowledge", "share", "support", "feedback"],
+          "ideal_length": 35
+        }
+      ],
+      "required_skills": ["python", "sql", "git", "api"],
+      "bonus_skills": ["docker", "kubernetes", "aws", "ci/cd", "microservices"]
+    },
+    "Data Scientist": {
+      "questions": [
+        {
+          "id": "q1",
+          "question": "Describe your ML/data science experience and key technologies.",
+          "weight": 0.25,
+          "keywords": ["machine learning", "ml", "python", "r", "tensorflow", "pytorch", "sklearn", "model", "data", "analysis"],
+          "ideal_length": 50
+        },
+        {
+          "id": "q2",
+          "question": "How do you approach debugging a critical production issue?",
+          "weight": 0.20,
+          "keywords": ["debug", "systematic", "reproduce", "hypothesis", "test", "monitor", "logs", "validate", "fix"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q3",
+          "question": "How do you manage your tasks and priorities?",
+          "weight": 0.15,
+          "keywords": ["prioritize", "agile", "deadline", "milestone", "plan", "track", "communicate", "risk"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q4",
+          "question": "Describe a time you improved model or pipeline performance.",
+          "weight": 0.25,
+          "keywords": ["improve", "accuracy", "metric", "reduce", "pipeline", "feature", "engineering", "training", "performance", "percent"],
+          "ideal_length": 40
+        },
+        {
+          "id": "q5",
+          "question": "How do you contribute to team collaboration?",
+          "weight": 0.15,
+          "keywords": ["team", "collaborate", "mentor", "share", "knowledge", "document", "communicate", "support"],
+          "ideal_length": 35
+        }
+      ],
+      "required_skills": ["python", "ml", "sql", "statistics"],
+      "bonus_skills": ["tensorflow", "pytorch", "nlp", "spark", "docker"]
+    }
+  }
+}
