@@ -3,7 +3,7 @@ FastAPI Backend for Candidate Q&A Screening Bot
 PRJ-110 | Yashwanth N.V PSVPEC
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
@@ -16,6 +16,8 @@ import csv
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.scoring_model import CandidateScoringModel
+from backend.database import init_db, get_candidates_df, add_candidate, update_notes
+from backend.pdf_processor import extract_text_from_pdf, extract_resume_data
 
 app = FastAPI(
     title="Candidate Q&A Screening Bot API",
@@ -32,7 +34,11 @@ app.add_middleware(
 )
 
 RUBRIC_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "scoring_rubric.json")
-DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "candidates.csv")
+
+# Initialize database on startup
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 model = CandidateScoringModel(RUBRIC_PATH)
 
@@ -65,7 +71,7 @@ def root():
 @app.get("/candidates")
 def get_all_candidates():
     """Get all candidates with their scores"""
-    df = pd.read_csv(DATA_PATH)
+    df = get_candidates_df()
     scored_df, _ = model.score_all_candidates(df)
     return {"candidates": scored_df.to_dict(orient="records")}
 
@@ -73,7 +79,7 @@ def get_all_candidates():
 @app.get("/candidates/{candidate_id}")
 def get_candidate(candidate_id: str):
     """Get detailed score for a specific candidate"""
-    df = pd.read_csv(DATA_PATH)
+    df = get_candidates_df()
     row = df[df["candidate_id"] == candidate_id]
     if row.empty:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -91,7 +97,7 @@ def score_new_candidate(candidate: CandidateInput):
 @app.get("/dashboard/metrics")
 def get_metrics():
     """Get overall screening metrics"""
-    df = pd.read_csv(DATA_PATH)
+    df = get_candidates_df()
     metrics = model.get_model_metrics(df)
     return metrics
 
@@ -99,7 +105,7 @@ def get_metrics():
 @app.get("/shortlist")
 def get_shortlist():
     """Get shortlisted candidates only"""
-    df = pd.read_csv(DATA_PATH)
+    df = get_candidates_df()
     scored_df, _ = model.score_all_candidates(df)
     shortlisted = scored_df[scored_df["shortlisted"] == True]
     return {"shortlisted_candidates": shortlisted.to_dict(orient="records")}
@@ -108,7 +114,7 @@ def get_shortlist():
 @app.get("/export/csv")
 def export_rankings():
     """Export candidate rankings as CSV string"""
-    df = pd.read_csv(DATA_PATH)
+    df = get_candidates_df()
     scored_df, _ = model.score_all_candidates(df)
     export_cols = [
         "rank", "candidate_id", "name", "email", "position",
@@ -126,6 +132,9 @@ async def upload_candidates(file: UploadFile = File(...)):
     """Upload CSV of candidates and score them all"""
     contents = await file.read()
     df = pd.read_csv(io.BytesIO(contents))
+    for _, row in df.iterrows():
+        candidate_data = row.to_dict()
+        add_candidate(candidate_data)
     scored_df, _ = model.score_all_candidates(df)
     return {"total": len(scored_df), "candidates": scored_df.to_dict(orient="records")}
 
@@ -133,12 +142,59 @@ async def upload_candidates(file: UploadFile = File(...)):
 @app.put("/candidates/notes")
 def update_reviewer_notes(update: ReviewerNoteUpdate):
     """Update reviewer notes for a candidate"""
-    df = pd.read_csv(DATA_PATH)
-    if update.candidate_id not in df["candidate_id"].values:
+    success = update_notes(update.candidate_id, update.notes)
+    if not success:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    df.loc[df["candidate_id"] == update.candidate_id, "reviewer_notes"] = update.notes
-    df.to_csv(DATA_PATH, index=False)
     return {"message": "Notes updated successfully", "candidate_id": update.candidate_id}
+
+
+@app.post("/candidates/upload-pdf")
+async def upload_resume_pdf(
+    candidate_id: str = Form(...),
+    name: str = Form(""),
+    email: str = Form(""),
+    position: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """Upload PDF resume, extract data, and add candidate"""
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    contents = await file.read()
+    try:
+        text = extract_text_from_pdf(contents)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Unable to parse PDF: {exc}")
+
+    if not text:
+        raise HTTPException(status_code=400, detail="No text could be extracted from the uploaded PDF.")
+
+    extracted_data = extract_resume_data(text)
+
+    candidate_data = {
+        "candidate_id": candidate_id,
+        "name": name or extracted_data.get("name", ""),
+        "email": email or extracted_data.get("email", ""),
+        "position": position,
+        "experience_years": extracted_data.get("experience_years", 0),
+        "answer_1": "",
+        "answer_2": "",
+        "answer_3": "",
+        "answer_4": "",
+        "answer_5": "",
+        "resume_skills": extracted_data.get("resume_skills", ""),
+        "resume_text": text,
+        "reviewer_notes": "",
+    }
+
+    try:
+        add_candidate(candidate_data)
+    except Exception as exc:
+        if "UNIQUE constraint" in str(exc) or "IntegrityError" in type(exc).__name__:
+            raise HTTPException(status_code=400, detail="Candidate ID already exists")
+        raise HTTPException(status_code=500, detail="Failed to save candidate data")
+
+    return {"message": "Candidate added from PDF", "candidate": candidate_data}
 
 
 @app.get("/rubric")
