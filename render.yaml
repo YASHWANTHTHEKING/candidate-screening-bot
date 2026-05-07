@@ -1,12 +1,11 @@
-services:
-  # 1. Managed PostgreSQL Database
-  - type: database
-    name: candidate-db
+databases:
+  - name: candidate-db
     databaseName: candidate_screening
     user: admin
     plan: free
 
-  # 2. FastAPI Backend
+services:
+  # 1. FastAPI Backend
   - type: web
     name: candidate-backend
     env: python
@@ -20,7 +19,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.10.0
 
-  # 3. Streamlit Frontend
+  # 2. Streamlit Frontend
   - type: web
     name: candidate-frontend
     env: python
